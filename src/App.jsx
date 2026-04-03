@@ -1335,6 +1335,35 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
     }
   };
 
+  // --- Dar "Útil" em um comentário ---
+  const handleLikeComment = async (commentId, currentLikes) => {
+    // 1. Atualização Otimista: aumenta o número na tela imediatamente para o usuário não sentir lentidão
+    setForumComments(prev => prev.map(cmt => 
+      cmt.id === commentId ? { ...cmt, likes: (cmt.likes || 0) + 1 } : cmt
+    ));
+
+    try {
+      // 2. Envia a atualização silenciosa para o banco de dados
+      const res = await fetch(`${supabaseUrl}/rest/v1/comentarios_forum?id=eq.${commentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({ likes: (currentLikes || 0) + 1 })
+      });
+
+      if (!res.ok) throw new Error("Falha ao registrar curtida");
+    } catch (e) {
+      console.error("Erro ao dar like:", e);
+      // Se a internet cair ou o banco falhar, desfazemos o +1 discretamente
+      setForumComments(prev => prev.map(cmt => 
+        cmt.id === commentId ? { ...cmt, likes: currentLikes } : cmt
+      ));
+    }
+  };
+
   const initialToggles = { certoErrado: true, multiplaEscolha: true, discursivas: true, jaResolvi: false, naoResolvi: true, acertei: false, errei: false };
   const [toggles, setToggles] = useState(initialToggles);
 
@@ -2313,9 +2342,10 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
               <div className="flex items-center gap-4">
                 {/* Botão Voltar com Resumo do Timer da Sessão */}
                 <button onClick={() => {
+                  // O seu código deve ficar parecido com isto:
                   customAlert('🏁 Sessão Pausada', `Tempo de foco contínuo: ${formatTimer(timer)}\nSeu progresso na bateria foi salvo.`);
-                  setIsTimerRunning(false);
-                  setCurrentView('filters');
+                  setTimer(0); // <--- Adicione esta linha exata para zerar o cronômetro
+                  setCurrentView('home'); // (ou a variável que você usa para voltar ao menu)
                 }} className="flex items-center text-white rounded-full px-5 py-2 transition-transform hover:scale-105 shadow-sm font-bold text-sm" style={{ backgroundColor: '#203b82' }}>
                   <ArrowLeft size={18} className="mr-1.5" />
                   <span className="hidden sm:inline">Painel</span>
@@ -2735,9 +2765,12 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
                       <p className="text-gray-700 text-sm leading-relaxed mb-4">{cmt.texto_comentario || cmt.texto}</p>
                       <div className="flex gap-4 border-t border-gray-100 pt-3">
                       {/* NOVO CÓDIGO DO BOTÃO CURTIR ABAIXO */}
-                      <button className="flex items-center text-xs font-bold text-white bg-[#203b82] hover:bg-blue-900 px-3 py-2 rounded-lg transition-transform active:scale-95 shadow-sm">
-                        <ThumbsUp size={14} className="mr-1.5" style={{ color: 'white' }} /> {cmt.likes || 0} Útil
-                      </button>
+                      <button 
+                        onClick={() => handleLikeComment(cmt.id, cmt.likes)}
+                        className="flex items-center text-xs font-bold text-white bg-[#203b82] hover:bg-blue-900 px-3 py-2 rounded-lg transition-transform active:scale-95 shadow-sm"
+                      >
+                        <ThumbsUp size={14} className="mr-1.5" style={{ color: 'white' }} /> {cmt.likes || 0} Útil
+                      </button>
                     </div>
                     </div>
                   ))
