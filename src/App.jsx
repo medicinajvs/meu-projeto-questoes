@@ -957,6 +957,63 @@ const StudyQuestionCard = ({ questao, index, fontSizeClass, isBookmarked, onTogg
   );
 };
 
+const MedicalLoader = () => {
+  return (
+    // O container usa "fixed inset-0" para cobrir a tela inteira enquanto carrega
+    <div className="fixed inset-0 bg-slate-50 flex flex-col justify-center items-center z-50">
+      
+      {/* Estilos embutidos específicos para a animação do SVG e pulso do texto */}
+      <style>
+        {`
+          .ecg-line {
+            fill: none;
+            stroke: #E53935; /* Cor vermelha típica da área da saúde */
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: heartbeat 2s linear infinite;
+          }
+          
+          /* Faz a linha traçar e apagar continuamente */
+          @keyframes heartbeat {
+            0% { stroke-dashoffset: 200; }
+            50% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -200; }
+          }
+          
+          .animate-pulse-slow {
+            animation: pulse-text 1.5s ease-in-out infinite;
+          }
+          
+          /* Faz o texto piscar suavemente */
+          @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}
+      </style>
+
+      {/* SVG do Eletrocardiograma */}
+      <div className="w-48 mb-6">
+        <svg viewBox="0 0 100 50" className="w-full h-full drop-shadow-md">
+          <polyline 
+            className="ecg-line"
+            points="0,25 20,25 25,15 30,45 40,5 50,45 55,25 75,25 80,20 85,30 90,25 100,25" 
+          />
+        </svg>
+      </div>
+      
+      {/* Textos de feedback para o utilizador */}
+      <h2 className="text-xl font-bold text-gray-800 animate-pulse-slow mb-2">
+        A preparar o seu plantão...
+      </h2>
+      <p className="text-sm text-gray-500">A carregar o banco de questões médicas</p>
+      
+    </div>
+  );
+};
 
 // --- COMPONENTE PRINCIPAL (ModuloQuestoes) ---
 // Ele agora aceita 'userId' como propriedade (que virá do login do Firebase no site principal)
@@ -1674,14 +1731,9 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
   };
 
   // --- Renderização de Loading Inicial ---
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center w-full h-screen bg-slate-50 text-blue-600 font-bold text-lg flex-col">
-        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        Carregando banco de questões...
-      </div>
-    );
-  }
+  if (isLoading) {
+    return <MedicalLoader />;
+  }
 
   // --- Renderização Principal da Aplicação ---
   return (
@@ -1760,7 +1812,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
                     <Filter size={16} className="mr-2" /> Filtros
                   </button>
                   
-                  <TopFilterDropdown label="Especialidade / Assunto" categoryKey="assunto" options={dynamicFilters.assunto} selectedValues={topFilters.assunto} onToggleItem={toggleTopFilterOption} isOpen={activeDropdown === 'assunto'} onToggleOpen={() => setActiveDropdown(activeDropdown === 'assunto' ? null : 'assunto')} />
+                  <TopFilterDropdown label="Especialidade" categoryKey="assunto" options={dynamicFilters.assunto} selectedValues={topFilters.assunto} onToggleItem={toggleTopFilterOption} isOpen={activeDropdown === 'assunto'} onToggleOpen={() => setActiveDropdown(activeDropdown === 'assunto' ? null : 'assunto')} />
                   <TopFilterDropdown label="Instituição" categoryKey="instituicao" options={dynamicFilters.instituicao} selectedValues={topFilters.instituicao} onToggleItem={toggleTopFilterOption} isOpen={activeDropdown === 'instituicao'} onToggleOpen={() => setActiveDropdown(activeDropdown === 'instituicao' ? null : 'instituicao')} />
                   <TopFilterDropdown label="Ano" categoryKey="ano" options={dynamicFilters.ano} selectedValues={topFilters.ano} onToggleItem={toggleTopFilterOption} isOpen={activeDropdown === 'ano'} onToggleOpen={() => setActiveDropdown(activeDropdown === 'ano' ? null : 'ano')} />
                   <TopFilterDropdown label="Região" categoryKey="regiao" options={dynamicFilters.regiao} selectedValues={topFilters.regiao} onToggleItem={toggleTopFilterOption} isOpen={activeDropdown === 'regiao'} onToggleOpen={() => setActiveDropdown(activeDropdown === 'regiao' ? null : 'regiao')} />
