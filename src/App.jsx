@@ -1015,9 +1015,59 @@ const MedicalLoader = () => {
   );
 };
 
+/**
+ * Componente Reutilizável de Modal de Alerta
+ */
+export const ModalAlerta = ({ 
+  isOpen, 
+  onClose, 
+  titulo, 
+  children, 
+  textoBotao = "OK",
+  icone 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div 
+        className="bg-[#2d2d30] border border-gray-700 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden transform transition-all scale-100 opacity-100"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-700/50 bg-[#37373a]">
+          {icone || (
+            <svg className="w-5 h-5 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          )}
+          <h3 className="text-lg font-bold text-white tracking-wide">
+            {titulo}
+          </h3>
+        </div>
+        <div className="px-5 py-6 text-gray-300 text-sm leading-relaxed space-y-3">
+          {children}
+        </div>
+        <div className="px-5 py-4 flex justify-end bg-[#252527]">
+          <button
+            onClick={onClose}
+            className="bg-[#00c4cc] hover:bg-[#00a8af] text-gray-900 font-bold px-8 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#00c4cc] focus:ring-offset-2 focus:ring-offset-[#252527]"
+          >
+            {textoBotao}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- COMPONENTE PRINCIPAL (ModuloQuestoes) ---
 // Ele agora aceita 'userId' como propriedade (que virá do login do Firebase no site principal)
 export default function ModuloQuestoes({ userId = "default_user" }) {
+  // --- Estado Global de Alertas Customizados ---
+  const [alertConfig, setAlertConfig] = useState({ isOpen: false, titulo: '', mensagem: '' });
+  const customAlert = (titulo, mensagem) => setAlertConfig({ isOpen: true, titulo, mensagem });
+  const closeCustomAlert = () => setAlertConfig({ isOpen: false, titulo: '', mensagem: '' });
   // Define uma chave única para o LocalStorage baseada no usuário logado
   const STORAGE_KEY = `historico_questoes_${userId}`;
   
@@ -1061,7 +1111,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
     const questoesParaImprimir = baseQuestoes.slice(0, MAX_QUESTOES_PDF);
 
     if (baseQuestoes.length > MAX_QUESTOES_PDF) {
-      alert(`Atenção: Você tem ${baseQuestoes.length} questões na fila, mas para evitar travamentos, limitamos a ${MAX_QUESTOES_PDF} questões por PDF.\n\nGerando o PDF das ${MAX_QUESTOES_PDF} primeiras...`);
+      customAlert('Atenção ao Limite', `Você tem ${baseQuestoes.length} questões na fila, mas para evitar travamentos, limitamos a ${MAX_QUESTOES_PDF} questões por PDF.\n\nGerando o PDF das ${MAX_QUESTOES_PDF} primeiras...`);
     } else if (selectedForPrint.length > 0) {
       // Pequeno aviso visual opcional de que está imprimindo a seleção
       console.log(`Gerando PDF com ${selectedForPrint.length} questões selecionadas.`);
@@ -1085,7 +1135,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
       setSelectedForPrint([]);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Erro ao montar o PDF. Tente com um número menor de questões.");
+      customAlert('Erro de Geração', 'Erro ao montar o PDF. Tente com um número menor de questões.');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -1265,7 +1315,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Erro detalhado do Supabase:", errorData);
-        alert(`Erro ao salvar no banco de dados!\nMotivo: ${errorData.message || JSON.stringify(errorData)}`);
+        customAlert('Erro ao Salvar', `Erro ao salvar no banco de dados!\nMotivo: ${errorData.message || JSON.stringify(errorData)}`);
         setIsSubmittingComment(false);
         return; // Para a execução aqui, não desenha na tela
       }
@@ -1278,7 +1328,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
 
     } catch (e) { 
       console.error("Erro de conexão:", e); 
-      alert("Falha na conexão com a internet ou com o Supabase.");
+      customAlert('Falha de Conexão', 'Falha na conexão com a internet ou com o Supabase.');
     } 
     finally { 
       setIsSubmittingComment(false); 
@@ -2263,7 +2313,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
               <div className="flex items-center gap-4">
                 {/* Botão Voltar com Resumo do Timer da Sessão */}
                 <button onClick={() => {
-                  alert(`🏁 Sessão Pausada!\nTempo de foco contínuo: ${formatTimer(timer)}\nSeu progresso na bateria foi salvo.`);
+                  customAlert('🏁 Sessão Pausada', `Tempo de foco contínuo: ${formatTimer(timer)}\nSeu progresso na bateria foi salvo.`);
                   setIsTimerRunning(false);
                   setCurrentView('filters');
                 }} className="flex items-center text-white rounded-full px-5 py-2 transition-transform hover:scale-105 shadow-sm font-bold text-sm" style={{ backgroundColor: '#203b82' }}>
@@ -2639,8 +2689,8 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
                     const detalhes = document.getElementById('erroDetalhes')?.value || '';
                     try {
                       await fetch(`${supabaseUrl}/rest/v1/reportes_erro`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }, body: JSON.stringify({ user_id: userId, questao_id: reportModalData.id.toString(), motivo, detalhes }) });
-                      alert('Relatório enviado para a equipe de moderação! Muito obrigado.');
-                    } catch(e) { console.error(e); alert('Erro ao conectar com o banco de dados.'); }
+                      customAlert('Relatório Enviado', 'Relatório enviado para a equipe de moderação! Muito obrigado.');
+                    } catch(e) { console.error(e); customAlert('Erro de Conexão', 'Erro ao conectar com o banco de dados.'); }
                     setReportModalData(null); 
                   }} 
                   className="w-full py-3 bg-[#203b82] hover:bg-blue-900 text-white font-black rounded-xl uppercase text-sm tracking-widest shadow-md transition-colors"
@@ -2748,7 +2798,7 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
                         setNoteReviewQuestion({ ...questaoRef, notaSalva: item.nota });
                         setIsAllNotesModalOpen(false); // Fecha o painel da central
                       } else {
-                        alert("A questão correspondente não foi encontrada no banco de dados.");
+                        customAlert('Questão Indisponível', 'A questão correspondente não foi encontrada no banco de dados atual.');
                       }
                     };
 
@@ -3025,6 +3075,17 @@ export default function ModuloQuestoes({ userId = "default_user" }) {
             </div>
           </div>
         )}
+
+        {/* --- MODAL DE ALERTA GLOBAL DO SISTEMA --- */}
+        <ModalAlerta
+          isOpen={alertConfig.isOpen}
+          onClose={closeCustomAlert}
+          titulo={alertConfig.titulo}
+        >
+          {/* whitespace-pre-wrap permite que os \n nas mensagens quebrem linha visualmente */}
+          <p className="whitespace-pre-wrap">{alertConfig.mensagem}</p>
+        </ModalAlerta>
+
       </main>
     </div>
   );
